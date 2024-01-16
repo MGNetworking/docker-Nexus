@@ -6,9 +6,17 @@ services:
     restart: always
     container_name: nexus-service
     ports: # utilisé pour exposer les ports du conteneur à l'hôte
-      - "8081:8081"
-      - "8992:8992"
-      - "8993:8993"
+      - "8100:8081" # accès a l'interface graphique
+      - "8101:8101"
+      - "8102:8102"
+      - "8103:8103"
+      - "8104:8104"
+      - "8105:8105"
+      - "8106:8106"
+      - "8107:8107"
+      - "8108:8108"
+      - "8109:8109"
+      - "8110:8110"
     volumes:
       - ./nexus-data:/nexus-data
 
