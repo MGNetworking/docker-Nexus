@@ -11,31 +11,44 @@
     <!--Cette section spécifie les serveurs Maven que Maven utilisera pour diverses opérations-->
     <servers>
         <server>
-            <id>nexus-Nas</id>
+            <id>maven-repo-nas</id>
             <username>admin</username>
             <password>x4LLM9JSq3iwTPthoqEk</password>
         </server>
+
     </servers>
 
     <mirrors>
         <!-- Mirror pour Nexus -->
         <mirror>
-            <id>maven-public</id>
+            <id>maven-central</id>
             <mirrorOf>*</mirrorOf>
-            <url>https://nexus.backhole.ovh/repository/maven-public/</url>
-            <mirrorOf>central</mirrorOf>
+            <url>https://sonatype-nexus.backhole.ovh/repository/maven-central/</url>
         </mirror>
     </mirrors>
 
     <!--Les profils permettent de définir des configurations spécifiques pour différents environnements-->
     <profiles>
         <profile>
-            <id>nexus</id>
+
             <repositories>
+
+                <!-- Référence à votre dépôt maven-Nas dans Nexus (privé) -->
+                <repository>
+                    <id>maven-repo-nas</id>
+                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-repo-nas/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+
                 <!-- Référence à votre dépôt maven-central dans Nexus -->
                 <repository>
                     <id>maven-central</id>
-                    <url>https://nexus.backhole.ovh/repository/maven-central</url>
+                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-central</url>
                     <releases>
                         <enabled>true</enabled>
                     </releases>
@@ -47,7 +60,7 @@
                 <!-- Référence à votre dépôt maven-public dans Nexus -->
                 <repository>
                     <id>maven-public</id>
-                    <url>https://nexus.backhole.ovh/repository/maven-public</url>
+                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-public</url>
                     <releases>
                         <enabled>true</enabled>
                     </releases>
@@ -59,7 +72,7 @@
                 <!-- Référence à votre dépôt maven-releases dans Nexus -->
                 <repository>
                     <id>maven-releases</id>
-                    <url>https://nexus.backhole.ovh/repository/maven-releases</url>
+                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-releases</url>
                     <releases>
                         <enabled>true</enabled>
                     </releases>
@@ -72,7 +85,7 @@
                 <!-- Référence à votre dépôt maven-snapshots dans Nexus -->
                 <repository>
                     <id>maven-snapshots</id>
-                    <url>https://nexus.backhole.ovh/repository/maven-snapshots</url>
+                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-snapshots</url>
                     <releases>
                         <enabled>false</enabled>
                     </releases>
@@ -81,17 +94,6 @@
                     </snapshots>
                 </repository>
 
-                <!-- Référence à votre dépôt maven-Nas dans Nexus (privé) -->
-                <repository>
-                    <id>maven-Nas</id>
-                    <url>https://nexus.backhole.ovh/repository/maven-Nas</url>
-                    <releases>
-                        <enabled>true</enabled>
-                    </releases>
-                    <snapshots>
-                        <enabled>true</enabled>
-                    </snapshots>
-                </repository>
 
             </repositories>
 
@@ -99,7 +101,7 @@
                 <!-- Référence à votre dépôt maven-central pour les plugins dans Nexus -->
                 <pluginRepository>
                     <id>maven-central</id>
-                    <url>https://nexus.backhole.ovh/repository/maven-central/</url>
+                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-central/</url>
                     <releases>
                         <enabled>true</enabled>
                     </releases>
