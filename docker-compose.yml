@@ -6,9 +6,9 @@ services:
     restart: always
     container_name: nexus-service
     ports: # utilisé pour exposer les ports du conteneur à l'hôte
-      - "8100:8081" # accès a l'interface graphique
-      - "8101:8101"
-      - "8102:8102"
+      - "8100:8081" # accès a l'interface graphique + l'accès a maven private (id: maven-private-nas)
+      - "8101:8101" # Docker hub
+      - "8102:8102" # Docker private
       - "8103:8103"
       - "8104:8104"
       - "8105:8105"
