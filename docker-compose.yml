@@ -5,20 +5,11 @@ services:
     image: sonatype/nexus3
     restart: always
     container_name: nexus-service
-    ports: # utilisé pour exposer les ports du conteneur à l'hôte
+    ports:
       - "8100:8081" # accès a l'interface graphique + l'accès a maven private (id: maven-private-nas)
-      - "8101:8101" # Docker hub
-      - "8102:8102" # Docker private
+      - "8101:8101"
+      - "8102:8102"
       - "8103:8103"
       - "8104:8104"
-      - "8105:8105"
-      - "8106:8106"
-      - "8107:8107"
-      - "8108:8108"
-      - "8109:8109"
-      - "8110:8110"
     volumes:
       - ./nexus-data:/nexus-data
-
-# exemple
-#docker run -d -p 8991:8081 -p 8992:8082 -p 8993:8083 --name nexus -v nexus-data:/nexus-data sonatype/nexus3
