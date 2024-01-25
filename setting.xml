@@ -11,7 +11,7 @@
     <!--Cette section spécifie les serveurs Maven que Maven utilisera pour diverses opérations-->
     <servers>
         <server>
-            <id>maven-repo-nas</id>
+            <id>maven-private-nas</id>
             <username>admin</username>
             <password>x4LLM9JSq3iwTPthoqEk</password>
         </server>
@@ -36,7 +36,7 @@
                 <!-- Référence à votre dépôt maven-Nas dans Nexus (privé) -->
                 <repository>
                     <id>maven-repo-nas</id>
-                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-repo-nas/</url>
+                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-private-nas/</url>
                     <releases>
                         <enabled>true</enabled>
                     </releases>
