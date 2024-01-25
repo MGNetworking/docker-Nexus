@@ -90,8 +90,7 @@ constante.
 
 ### Déployer vers le dépot
 
-Pour déployer vers le dépot Commande pour déployer vers le dépot
-
+Pour déployer vers le dépot 
 ```shell
 mvn clean package deploy
 ```
