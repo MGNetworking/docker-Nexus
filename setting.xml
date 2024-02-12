@@ -12,8 +12,22 @@
     <servers>
         <server>
             <id>maven-private</id>
-            <username>admin</username>
-            <password>x4LLM9JSq3iwTPthoqEk</password>
+            <username>maxime</username>
+            <password>fMuUWZdzQvax5frewugy</password>
+        </server>
+
+        <!-- Configuration pour le dépôt maven-snapshots -->
+        <server>
+            <id>maven-snapshots</id>
+            <username>maxime</username>
+            <password>fMuUWZdzQvax5frewugy</password>
+        </server>
+
+        <!-- Configuration pour le dépôt maven-releases -->
+        <server>
+            <id>maven-releases</id>
+            <username>maxime</username>
+            <password>fMuUWZdzQvax5frewugy</password>
         </server>
 
     </servers>
@@ -26,12 +40,6 @@
             <url>https://sonatype-nexus.backhole.ovh/repository/maven-central/</url>
         </mirror>
 
-        <!--  non utilisé -->
-<!--        <mirror>-->
-<!--            <id>maven-public</id>-->
-<!--            <mirrorOf>*</mirrorOf>-->
-<!--            <url>https://sonatype-nexus.backhole.ovh/repository/maven-public/</url>-->
-<!--        </mirror>-->
 
     </mirrors>
 
@@ -56,7 +64,7 @@
                 <!-- Référence à votre dépôt maven-central dans Nexus -->
                 <repository>
                     <id>maven-central</id>
-                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-central</url>
+                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-central/</url>
                     <releases>
                         <enabled>true</enabled>
                     </releases>
@@ -68,7 +76,7 @@
                 <!-- Référence à votre dépôt maven-public dans Nexus -->
                 <repository>
                     <id>maven-public</id>
-                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-public</url>
+                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-public/</url>
                     <releases>
                         <enabled>true</enabled>
                     </releases>
@@ -80,7 +88,7 @@
                 <!-- Référence à votre dépôt maven-releases dans Nexus -->
                 <repository>
                     <id>maven-releases</id>
-                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-releases</url>
+                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-releases/</url>
                     <releases>
                         <enabled>true</enabled>
                     </releases>
@@ -93,7 +101,7 @@
                 <!-- Référence à votre dépôt maven-snapshots dans Nexus -->
                 <repository>
                     <id>maven-snapshots</id>
-                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-snapshots</url>
+                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-snapshots/</url>
                     <releases>
                         <enabled>false</enabled>
                     </releases>
