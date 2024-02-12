@@ -11,20 +11,28 @@
     <!--Cette section spécifie les serveurs Maven que Maven utilisera pour diverses opérations-->
     <servers>
         <server>
-            <id>maven-private-nas</id>
+            <id>maven-private</id>
             <username>admin</username>
             <password>x4LLM9JSq3iwTPthoqEk</password>
         </server>
 
     </servers>
 
+    <!-- Mirror pour Nexus -->
     <mirrors>
-        <!-- Mirror pour Nexus -->
         <mirror>
             <id>maven-central</id>
             <mirrorOf>*</mirrorOf>
             <url>https://sonatype-nexus.backhole.ovh/repository/maven-central/</url>
         </mirror>
+
+        <!--  non utilisé -->
+<!--        <mirror>-->
+<!--            <id>maven-public</id>-->
+<!--            <mirrorOf>*</mirrorOf>-->
+<!--            <url>https://sonatype-nexus.backhole.ovh/repository/maven-public/</url>-->
+<!--        </mirror>-->
+
     </mirrors>
 
     <!--Les profils permettent de définir des configurations spécifiques pour différents environnements-->
@@ -35,8 +43,8 @@
 
                 <!-- Référence à votre dépôt maven-Nas dans Nexus (privé) -->
                 <repository>
-                    <id>maven-repo-nas</id>
-                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-private-nas/</url>
+                    <id>maven-private</id>
+                    <url>https://sonatype-nexus.backhole.ovh/repository/maven-private/</url>
                     <releases>
                         <enabled>true</enabled>
                     </releases>
