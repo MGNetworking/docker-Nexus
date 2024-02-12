@@ -72,17 +72,17 @@ votre environnement Maven.
 Ce fichier contient des configurations telles que les paramètres de serveur, les profils, les référentiels (
 repositories), les plug-ins, et d'autres paramètres liés à Maven.
 
-La configuration pour la connexion entre la machine locale et le dépôt se trouve dans le fichier de `/.m2/settings.xml`
+La configuration pour la connexion entre la machine locale et le dépôt se trouve dans le fichier de `~/.m2/settings.xml`
 
 ### repository
 
-Le répertoire `.m2/repository` est le répertoire local des référentiels Maven. Il s'agit d'un répertoire dans le
+Le répertoire `~/.m2/repository` est le répertoire local des référentiels Maven. Il s'agit d'un répertoire dans le
 répertoire utilisateur (par exemple, dans le répertoire personnel de l'utilisateur) où Maven stocke les artefacts
 téléchargés depuis les référentiels distants.
 
 Chaque fois que vous exécutez une tâche Maven (par exemple, `mvn clean install`), Maven télécharge les dépendances
 nécessaires depuis les référentiels définis dans le fichier pom.xml. Ces dépendances sont ensuite stockées localement
-dans le répertoire `.m2/repository`.
+dans le répertoire `~/.m2/repository`.
 
 Cela est fait pour éviter de télécharger les mêmes dépendances à chaque fois que vous
 construisez votre projet, ce qui accélère le processus de build et réduit la dépendance à une connexion Internet
