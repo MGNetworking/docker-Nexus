@@ -10,7 +10,7 @@ services:
       - "8103:8103"   # Docker hosted (v1/v2)
       - "8104:8104"   # Docker group (si utilisé)
     volumes:
-      - ./nexus-data:/nexus-data
+      - nexus-data:/nexus-data
 
 volumes:
   nexus-data:
