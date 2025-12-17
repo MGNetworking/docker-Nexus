@@ -1,6 +1,19 @@
 # Sonatype Nexus Repository Manager (Docker)
 
+## Accès Nexus Repository Manager (environnement maîtrisé)
+
+L’instance Sonatype Nexus Repository Manager associée à ce projet est exploitée au sein d’une infrastructure personnelle
+et n’est pas exposée en permanence pour des raisons de sécurité.
+
+Elle est utilisée comme dépôt d’artefacts interne (Maven, Docker, etc.) et peut
+être rendue accessible ponctuellement à des fins de présentation technique.
+
+L’ensemble des configurations d’exploitation, des scripts de maintenance
+(sauvegarde / restauration) et du déploiement Docker sont documentés et versionnés
+dans ce dépôt.
+
 ## Sommaire
+
 - [Présentation](#présentation)
 - [Architecture et périmètre](#architecture-et-périmètre)
 - [Démarrage rapide](#démarrage-rapide)
@@ -18,6 +31,7 @@ Sonatype Nexus Repository Manager est un gestionnaire de dépôts permettant de 
 artefacts logiciels (Maven, Docker, npm, etc.).
 
 Ce projet fournit une **mise en place Dockerisée** de Nexus, orientée **exploitation** :
+
 - déploiement via Docker Compose,
 - persistance des données via **volume Docker nommé**,
 - exposition sécurisée via reverse-proxy (TLS),
@@ -32,12 +46,12 @@ Ce projet fournit une **mise en place Dockerisée** de Nexus, orientée **exploi
 - **Runtime** : Sonatype Nexus Repository Manager (conteneur Docker)
 - **Stockage** : volume Docker `nexus-data`
 - **Accès** :
-  - Interface Web et endpoints Maven via HTTPS (reverse-proxy)
-  - Docker Registry privée via HTTPS
+    - Interface Web et endpoints Maven via HTTPS (reverse-proxy)
+    - Docker Registry privée via HTTPS
 - **Hors périmètre** :
-  - Aucun fichier `settings.xml` réel
-  - Aucun secret versionné
-  - Aucun pipeline CI/CD
+    - Aucun fichier `settings.xml` réel
+    - Aucun secret versionné
+    - Aucun pipeline CI/CD
 
 Les fichiers sensibles (credentials, certificats, configurations réelles) sont gérés **hors de ce dépôt**.
 
@@ -62,6 +76,7 @@ Les données Nexus sont stockées dans un **volume Docker nommé** :
 - Point de montage conteneur : `/nexus-data`
 
 Ce choix permet :
+
 - la portabilité de l’environnement,
 - des sauvegardes propres,
 - une restauration rapide en cas d’échec de mise à jour.
