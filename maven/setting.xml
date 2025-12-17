@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+    <!-- Exemple de settings.xml pour utiliser un Nexus comme proxy Maven.
+         ⚠️ Ne commitez JAMAIS de vrais identifiants ici. Utilisez des variables d'environnement
+         ou un fichier settings.xml local/non versionné. -->
+
+    <pluginGroups/>
+    <proxies/>
+
+    <servers>
+        <!-- Identifiants utilisés par Maven pour accéder aux repositories Nexus nécessitant une auth.
+             Astuce: remplacez les placeholders par des variables d'environnement dans votre CI. -->
+        <server>
+            <id>maven-private</id>
+            <username>${env.NEXUS_USERNAME}</username>
+            <password>${env.NEXUS_PASSWORD}</password>
+        </server>
+    </servers>
+
+    <mirrors>
+        <!-- Exemple: forcer toutes les résolutions (mirrorOf="*") à passer par Nexus (proxy de central) -->
+        <mirror>
+            <id>nexus-maven-central</id>
+            <mirrorOf>*</mirrorOf>
+            <url>https://sonatype-nexus.example.com/repository/maven-central/</url>
+        </mirror>
+    </mirrors>
+
+    <profiles>
+        <profile>
+            <id>nexus</id>
+
+            <repositories>
+                <repository>
+                    <id>maven-private</id>
+                    <url>https://sonatype-nexus.example.com/repository/maven-private/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                </repository>
+
+                <repository>
+                    <id>maven-central</id>
+                    <url>https://sonatype-nexus.example.com/repository/maven-central/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                </repository>
+
+                <repository>
+                    <id>maven-public</id>
+                    <url>https://sonatype-nexus.example.com/repository/maven-public/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                </repository>
+
+                <repository>
+                    <id>maven-releases</id>
+                    <url>https://sonatype-nexus.example.com/repository/maven-releases/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>false</enabled></snapshots>
+                </repository>
+
+                <repository>
+                    <id>maven-snapshots</id>
+                    <url>https://sonatype-nexus.example.com/repository/maven-snapshots/</url>
+                    <releases><enabled>false</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                </repository>
+            </repositories>
+
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>maven-central</id>
+                    <url>https://sonatype-nexus.example.com/repository/maven-central/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
+
+    <activeProfiles>
+        <activeProfile>nexus</activeProfile>
+    </activeProfiles>
+
+</settings>
