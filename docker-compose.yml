@@ -1,15 +1,17 @@
-version: '3.7'
-
 services:
   nexus:
-    image: sonatype/nexus3
-    restart: always
+    image: sonatype/nexus3:3.87.0-alpine
     container_name: nexus-service
+    restart: unless-stopped
     ports:
-      - "8100:8081" # accès a l'interface graphique + l'accès a maven private (id: maven-private-nas)
+      - "8100:8081"   # UI Nexus + endpoints /repository/... (Maven)
       - "8101:8101"
       - "8102:8102"
-      - "8103:8103"
-      - "8104:8104"
+      - "8103:8103"   # Docker hosted (v1/v2)
+      - "8104:8104"   # Docker group (si utilisé)
     volumes:
       - ./nexus-data:/nexus-data
+
+volumes:
+  nexus-data:
+    name: nexus-data
