@@ -219,6 +219,24 @@ appliquée par un outil, au lieu d'être saisie à la main dans l'interface.
 - `scripts/nexus-config.mjs` : l'outil, sans dépendance (Node 18 ou plus).
 - `scripts/nexus-config.sh` : le lanceur à utiliser au quotidien.
 
+### Prérequis : Node.js 18 ou plus
+
+L'outil a besoin de Node.js (`node --version` pour vérifier). Sur un serveur Debian ou Ubuntu, installation avec le dépôt
+`apt` de NodeSource, qui fournit la version LTS courante et se met à jour avec le système :
+
+```bash
+sudo apt update && sudo apt install -y curl ca-certificates
+curl -fsSL https://deb.nodesource.com/setup_lts.x -o nodesource_setup.sh   # lisible avant exécution : less nodesource_setup.sh
+sudo bash nodesource_setup.sh
+sudo apt install -y nodejs
+node --version
+```
+
+- Mises à jour : `sudo apt update && sudo apt upgrade` (même version majeure). Pour changer de version majeure, relancer
+  `setup_lts.x` puis `sudo apt install nodejs`.
+- Avant d'installer, `apt policy nodejs | head -3` montre la version proposée par la distribution : si `Candidate` est 18
+  ou plus, `sudo apt install nodejs` suffit. Sur Windows, installeur de [nodejs.org](https://nodejs.org).
+
 ### En pratique : deux commandes
 
 Le lanceur demande les mots de passe **sans les afficher** (rien dans l'historique du terminal, aucun copier-coller de

@@ -413,6 +413,18 @@ async function apply() {
   const upd = !!opts.update;
   let created = 0, updated = 0, left = 0;
 
+  // Contrôle AVANT toute écriture : un utilisateur à créer sans mot de passe ferait échouer l'application à la toute
+  // fin, après que les dépôts et les droits ont déjà été modifiés. On refuse plutôt de commencer.
+  if (!opts.dryRun) {
+    const manquants = (cfg.users ?? []).filter((u) => !live.users[u.userId] && !envPassword(u));
+    if (manquants.length) {
+      throw new Error(
+        `mot de passe manquant pour l'utilisateur à créer : ${manquants.map((u) => `${u.userId} (variable ${u.passwordEnv ?? "passwordEnv"})`).join(", ")}. ` +
+        "Aucune modification n'a été faite : relancer en fournissant ce mot de passe."
+      );
+    }
+  }
+
   title(`Nexus ${NEXUS_URL}${opts.dryRun ? "  (simulation : rien n'est modifié)" : ""}${upd ? "  (--update : les écarts sont corrigés)" : ""}`);
   if (live.eula && !live.eula.accepted) console.log("  ! CLUF non accepté : Nexus refusera les requêtes Docker tant que l'utilisateur ne l'a pas accepté.");
 

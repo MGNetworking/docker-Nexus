@@ -74,11 +74,14 @@ case "$CMD" in
     # La liste est d'abord lue dans un tableau : dans une boucle « while read ... < <(...) », les saisies de
     # ask_secret liraient la sortie de node au lieu du clavier.
     PWVARS=()
-    while IFS= read -r var; do
-      [[ -n "$var" ]] && PWVARS+=("$var")
-    done < <(node -e 'try{for(const u of JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).users||[])if(u.passwordEnv)console.log(u.passwordEnv)}catch{}' "$CONFIG" | tr -d '\r')
-    for var in ${PWVARS[@]+"${PWVARS[@]}"}; do
-      ask_secret "$var" "Mot de passe pour ${var} (laisser vide si l'utilisateur existe déjà) : " optionnel
+    while IFS= read -r entry; do
+      [[ -n "$entry" ]] && PWVARS+=("$entry")
+    done < <(node -e 'try{for(const u of JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).users||[])if(u.passwordEnv)console.log(u.passwordEnv+" "+u.userId)}catch{}' "$CONFIG" | tr -d '\r')
+    for entry in ${PWVARS[@]+"${PWVARS[@]}"}; do
+      var="${entry%% *}"
+      user="${entry#* }"
+      echo "Le compte « ${user} » est un NOUVEAU compte Nexus (pour Jenkins et les postes de dev), distinct de admin."
+      ask_secret "$var" "Mot de passe À CHOISIR pour « ${user} » (vide s'il existe déjà sur Nexus) : " optionnel
     done
 
     echo
