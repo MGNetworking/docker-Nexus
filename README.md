@@ -93,28 +93,117 @@ Ils sont conçus pour une **utilisation manuelle**, lors des opérations de main
 
 Les scripts sont regroupés dans le répertoire `scripts/` :
 
-- **`backup_nexus_volume.sh`**  
-  Sauvegarde le volume Docker `nexus-data` dans une archive `tar.gz` sur le système hôte.
-  Le service Nexus est arrêté automatiquement afin de garantir une sauvegarde cohérente.
+- **`backup_nexus_volume.sh`** : sauvegarde le volume `nexus-data` dans une archive `tar.gz`. [Détail ci-dessous](#sauvegarde--backup_nexus_volumesh).
+- **`restore_nexus_volume.sh`** : restaure une archive dans le volume, en **écrasant** son contenu. [Détail ci-dessous](#restauration--restore_nexus_volumesh).
+- **`nexus-config.mjs`** : configuration de Nexus (dépôts, accès, rôles), voir [Configuration de Nexus](#configuration-de-nexus-nexus-config).
 
-- **`restore_nexus_volume.sh`**  
-  Restaure une archive de sauvegarde dans le volume Docker `nexus-data`.
-  Cette opération **écrase entièrement** le contenu existant du volume et est destinée aux scénarios de rollback.
+Les deux scripts de sauvegarde et de restauration se lancent **depuis la racine du projet** (là où se trouve le
+`docker-compose.yml`), car ils utilisent `docker compose` pour arrêter Nexus.
+
+### Sauvegarde : `backup_nexus_volume.sh`
+
+```bash
+./scripts/backup_nexus_volume.sh [VOLUME] [DOSSIER_DE_SAUVEGARDE]     # défauts : nexus-data  ./backup
+```
+
+**Ce que fait le script, dans cet ordre**
+
+1. Vérifie que le volume Docker existe.
+2. Arrête Nexus (`docker compose down`) puis **vérifie qu'aucun conteneur n'utilise encore le volume**. `docker compose down`
+   ne s'applique qu'au projet Compose de ce dossier : un Nexus lancé depuis un autre dossier, ou sous un autre nom de
+   projet, continuerait de tourner, et une sauvegarde à chaud serait incohérente. Dans ce cas le script s'arrête, nomme
+   les conteneurs concernés et leur projet Compose ; il suffit de les arrêter (`docker stop <nom>`) et de relancer.
+3. Affiche la taille du volume, puis écrit l'archive en affichant l'avancement (`... 3,2G écrits`) toutes les 15 secondes.
+4. Renomme l'archive et en donne la propriété à l'utilisateur qui a lancé le script.
+
+Nexus **n'est pas relancé** : `docker compose up -d` quand la sauvegarde est terminée (message `OK: backup créé`).
+
+**Archive incomplète : jamais de faux `.tar.gz`**
+
+L'archive est écrite sous le nom `nexus-data_AAAAMMJJ_HHMMSS.tar.gz.partial` et **renommée seulement quand elle est
+complète**. Conséquences :
+
+- **`Ctrl-C`** (ou un signal d'arrêt) pendant la sauvegarde : le script arrête son conteneur de sauvegarde, **supprime
+  l'archive incomplète** et affiche « Sauvegarde interrompue ». Il ne reste aucun `.tar.gz` tronqué qui ressemblerait à une
+  sauvegarde valide. **Nexus reste arrêté** : `docker compose up -d`.
+- **Erreur** pendant l'écriture (disque plein, lecture impossible...) : même comportement, la sauvegarde échoue au lieu de
+  produire une archive partielle.
+- **Arrêt brutal** (`kill -9`, coupure de courant) : un fichier `.partial` peut rester. Il n'est jamais pris pour une
+  sauvegarde (le restaurateur le refuserait) : supprimez-le à la main. Un conteneur `nexus-backup-<horodatage>` encore actif
+  se supprime avec `docker rm -f`.
+
+**Compression et durée**
+
+La compression est **rapide par défaut (niveau 1)**, bien plus qu'avec le niveau 9 de `gzip` : les blobs de Nexus (images
+Docker, jars) sont déjà compressés, un niveau élevé coûte des minutes pour presque aucun gain. Pour plusieurs Go, comptez
+quand même **plusieurs minutes** ; l'ancienne version (compression maximale, aucun affichage) dépassait 14 minutes sans
+finir pour environ 17 Go.
+
+| Variable | Défaut | Rôle |
+|---|---|---|
+| `GZIP_LEVEL` | `1` | niveau de compression, de 1 (le plus rapide) à 9 (le plus petit, bien plus lent) |
+| `BACKUP_UID`, `BACKUP_GID` | utilisateur qui lance le script | propriétaire de l'archive |
+
+L'archive est créée par un conteneur qui tourne en root ; le script en change le propriétaire à la fin. Elle appartient donc
+à celui qui a lancé le script, et non à `root`. Il n'est pas nécessaire de lancer le script avec `sudo` (seul l'accès à
+Docker est requis).
+
+**Vérifier une archive**
+
+```bash
+gzip -t ./backup/nexus-data_AAAAMMJJ_HHMMSS.tar.gz          # intégrité (relit tout le fichier : plusieurs minutes si gros)
+tar -tzf ./backup/nexus-data_AAAAMMJJ_HHMMSS.tar.gz | head   # contenu
+```
+
+### Restauration : `restore_nexus_volume.sh`
+
+```bash
+./scripts/restore_nexus_volume.sh [VOLUME] <ARCHIVE>      # défaut du volume : nexus-data ; l'archive est obligatoire
+```
+
+**Ce que fait le script, dans cet ordre**
+
+1. **Vérifie l'intégrité de l'archive** (`gzip -t`) **avant de toucher à quoi que ce soit.** Une archive tronquée (sauvegarde
+   interrompue, copie incomplète) est refusée : rien n'est modifié, Nexus tourne toujours, le volume est intact. La vérification
+   relit tout le fichier : plusieurs minutes pour une grosse archive.
+2. Vérifie que le volume existe.
+3. Arrête Nexus (`docker compose down`) et contrôle, comme la sauvegarde, **qu'aucun conteneur n'utilise encore le volume**
+   (sinon : arrêt sans avoir rien modifié).
+4. **Vide entièrement le volume** (fichiers cachés compris), puis extrait l'archive dedans.
+
+Nexus **n'est pas relancé** : `docker compose up -d`, puis `docker compose logs -f` pour suivre le démarrage.
+
+| Variable | Rôle |
+|---|---|
+| `SKIP_VERIFY=1` | ignore la vérification d'intégrité de l'étape 1. Déconseillé : une archive tronquée détruirait le volume actuel sans rien pouvoir remettre à la place |
+
+> **La restauration écrase tout le contenu actuel du volume**, sans en faire de copie. Si l'état actuel a de la valeur,
+> faites d'abord une sauvegarde.
 
 ### Bonnes pratiques
 
-- Toujours effectuer les sauvegardes et restaurations **service arrêté**.
-- Stocker les archives de sauvegarde hors du projet (NAS, stockage externe, dépôt privé).
-- Aucun secret n’est stocké dans les scripts.
+- Toujours effectuer les sauvegardes et restaurations **service arrêté** (les scripts s'en chargent et le vérifient).
+- **Sauvegarder avant toute opération risquée** : mise à jour de l'image, changement de configuration importante, bascule du
+  routage Docker.
+- Stocker les archives de sauvegarde hors du projet et hors du serveur (NAS, stockage externe, dépôt privé), et vérifier de
+  temps en temps qu'une restauration fonctionne sur une machine de test.
+- Aucun secret n'est stocké dans les scripts. L'archive, elle, contient **toutes** les données de Nexus (dont ses utilisateurs
+  et ses réglages) : la protéger comme un secret.
 
 ### Exemples
 
 ```bash
-# Sauvegarde
+# Sauvegarde (compression rapide par défaut)
 ./scripts/backup_nexus_volume.sh nexus-data ./backup
 
-# Restauration
-./scripts/restore_nexus_volume.sh nexus-data ./backup/nexus-data_YYYYMMDD_HHMMSS.tar.gz
+# Sauvegarde plus compacte mais plus lente
+GZIP_LEVEL=6 ./scripts/backup_nexus_volume.sh nexus-data ./backup
+
+# Restauration (écrase le volume)
+./scripts/restore_nexus_volume.sh nexus-data ./backup/nexus-data_AAAAMMJJ_HHMMSS.tar.gz
+
+# Dans les deux cas, ensuite
+docker compose up -d
 ```
 
 ---
