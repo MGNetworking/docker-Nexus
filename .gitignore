@@ -33,3 +33,6 @@ build/
 
 ### source projet ###
 nexus-data
+### Instantanés de Nexus (nexus-config audit / export)
+etat-actuel.json
+etat-*.json

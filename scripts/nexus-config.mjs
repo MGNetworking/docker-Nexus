@@ -2,6 +2,10 @@
 // nexus-config : exporte, vérifie et applique la configuration de Nexus Repository Manager 3 (API REST).
 // Aucune dépendance : Node 18 ou plus.
 //
+// En pratique, passer par scripts/nexus-config.sh : il demande les mots de passe sans les afficher et enchaîne les étapes.
+//
+//   node scripts/nexus-config.mjs audit  [--out fichier]   LECTURE SEULE, en une fois : export (etat-actuel.json), check
+//                                                          avec sondes du reverse proxy, puis simulation de apply --update
 //   node scripts/nexus-config.mjs export [--out fichier]   lit un Nexus et écrit son état au format du fichier de config
 //   node scripts/nexus-config.mjs check  [--public URL]    compare un Nexus au fichier de config (LECTURE SEULE)
 //   node scripts/nexus-config.mjs apply  [--update] [--dry-run]
@@ -9,9 +13,11 @@
 //
 // Options : --url URL (ou NEXUS_URL)   --config fichier (défaut config/nexus-config.json)
 //           --public [URL] : sondes HTTP anonymes et certificat TLS via le reverse proxy (adresse du contrat, ou URL donnée)
+// Adresse de Nexus : --url, sinon NEXUS_URL, sinon (lecture seule et --dry-run uniquement) contract.publicUrl du fichier
+// de config. Un apply RÉEL exige l'adresse explicite : garde-fou contre une application involontaire sur la production.
 // Environnement : NEXUS_ADMIN_USER (admin), NEXUS_ADMIN_PASSWORD, et la variable `passwordEnv` de chaque utilisateur.
 //
-// Règles : check ne modifie rien ; apply ne touche jamais à un élément existant sans --update ; le contrat de
+// Règles : check et audit ne modifient rien ; apply ne touche jamais à un élément existant sans --update ; le contrat de
 // Nexus avec le reverse proxy (adresse publique, sondes) est dans la section "contract" du fichier de config.
 // Le contrat de licence (CLUF) n'est jamais accepté par cet outil.
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -35,23 +41,34 @@ function parseArgs(argv) {
 }
 
 function usage() {
-  const src = readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n");
-  return src.slice(1, 15).map((l) => l.replace(/^\/\/ ?/, "")).join("\n");
+  const src = readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").slice(1);
+  const end = src.findIndex((l) => !l.startsWith("//"));
+  return src.slice(0, end).map((l) => l.replace(/^\/\/ ?/, "")).join("\n");
 }
 
 let opts;
 try { opts = parseArgs(process.argv.slice(2)); } catch (e) { console.error(`Erreur : ${e.message}`); process.exit(2); }
 const cmd = opts._[0];
-if (opts.help || !["export", "check", "apply"].includes(cmd)) {
+if (opts.help || !["export", "check", "apply", "audit"].includes(cmd)) {
   console.log(usage());
   process.exit(opts.help ? 0 : 2);
 }
 
 const CONFIG_PATH = opts.config ?? fileURLToPath(new URL("../config/nexus-config.json", import.meta.url));
-const NEXUS_URL = (opts.url ?? process.env.NEXUS_URL ?? "").replace(/\/$/, "");
+const READ_ONLY = cmd !== "apply" || !!opts.dryRun;
+let NEXUS_URL = opts.url ?? process.env.NEXUS_URL ?? "";
+if (!NEXUS_URL && READ_ONLY && existsSync(CONFIG_PATH)) {
+  try { NEXUS_URL = JSON.parse(readFileSync(CONFIG_PATH, "utf8")).contract?.publicUrl ?? ""; } catch { /* config illisible : erreur plus bas */ }
+}
+NEXUS_URL = NEXUS_URL.replace(/\/$/, "");
 const ADMIN_USER = process.env.NEXUS_ADMIN_USER ?? "admin";
 const ADMIN_PASSWORD = process.env.NEXUS_ADMIN_PASSWORD ?? "";
-if (!NEXUS_URL) { console.error("Erreur : --url ou NEXUS_URL manquant."); process.exit(2); }
+if (!NEXUS_URL) {
+  console.error(READ_ONLY
+    ? "Erreur : adresse de Nexus manquante (--url, NEXUS_URL, ou contract.publicUrl dans le fichier de config)."
+    : "Erreur : pour appliquer, l'adresse de Nexus doit être donnée explicitement (--url ou NEXUS_URL) : garde-fou contre une application involontaire sur la production.");
+  process.exit(2);
+}
 if (!ADMIN_PASSWORD) { console.error("Erreur : NEXUS_ADMIN_PASSWORD manquant."); process.exit(2); }
 
 // ---------------------------------------------------------------- API
@@ -385,7 +402,7 @@ async function check() {
   await probes(cfg);
 
   console.log(`\n${problems === 0 ? "Conforme au fichier de config." : `${problems} écart(s) ou élément(s) absent(s).`}`);
-  process.exit(problems === 0 ? 0 : 1);
+  return problems === 0 ? 0 : 1;
 }
 
 // ---------------------------------------------------------------- apply
@@ -479,7 +496,32 @@ async function apply() {
   }
 
   console.log(`\nTerminé : ${created} créé(s), ${updated} mis à jour, ${left} écart(s) laissé(s) tel(s) quel(s).`);
-  process.exit(0);
+  return 0;
+}
+
+// ---------------------------------------------------------------- audit (lecture seule)
+async function audit() {
+  title("1/3  Photographie de Nexus (export)");
+  opts.out = opts.out ?? "etat-actuel.json";
+  await exportConfig();
+
+  title("2/3  Comparaison au fichier de config et sondes du reverse proxy (check)");
+  // Sondes sur l'adresse publique du contrat, sauf si on audite un autre Nexus (le test d'un Nexus local ne doit pas
+  // envoyer de requêtes à la production) : dans ce cas, --public URL les dirige explicitement.
+  if (opts.public === undefined) {
+    const contractUrl = (loadConfig().contract?.publicUrl ?? "").replace(/\/$/, "");
+    opts.public = contractUrl && contractUrl.toLowerCase() === NEXUS_URL.toLowerCase() ? true : undefined;
+  }
+  problems = 0;
+  const code = await check();
+
+  title("3/3  Ce que ferait « apply --update » (simulation, rien n'est modifié)");
+  opts.dryRun = true;
+  opts.update = true;
+  await apply();
+
+  console.log("\nAudit terminé : rien n'a été modifié sur Nexus.");
+  return code;
 }
 
 // ---------------------------------------------------------------- export
@@ -531,9 +573,12 @@ async function exportConfig() {
 }
 
 try {
-  if (cmd === "check") await check();
-  else if (cmd === "apply") await apply();
+  let code = 0;
+  if (cmd === "check") code = await check();
+  else if (cmd === "apply") code = await apply();
+  else if (cmd === "audit") code = await audit();
   else await exportConfig();
+  process.exit(code);
 } catch (e) {
   console.error(`Erreur : ${e.message}`);
   process.exit(2);

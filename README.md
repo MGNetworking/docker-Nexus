@@ -214,26 +214,56 @@ La configuration de Nexus (dépôts, accès anonyme, rôles, utilisateurs) est d
 appliquée par un outil, au lieu d'être saisie à la main dans l'interface.
 
 - `config/nexus-config.json` : l'état voulu. Aucun mot de passe : chaque utilisateur est lié à une variable
-  d'environnement (`passwordEnv`). La section `contract` décrit ce que Nexus attend du reverse proxy.
+  d'environnement (`passwordEnv`). La section `contract` décrit ce que Nexus attend du reverse proxy (adresse publique,
+  sondes).
 - `scripts/nexus-config.mjs` : l'outil, sans dépendance (Node 18 ou plus).
+- `scripts/nexus-config.sh` : le lanceur à utiliser au quotidien.
+
+### En pratique : deux commandes
+
+Le lanceur demande les mots de passe **sans les afficher** (rien dans l'historique du terminal, aucun copier-coller de
+variable) et enchaîne les étapes. L'adresse de Nexus est celle du contrat (`contract.publicUrl`), sauf `--url`.
 
 ```bash
-export NEXUS_URL=https://sonatype-nexus.backhole.ovh NEXUS_ADMIN_PASSWORD=...   # compte administrateur
-
-node scripts/nexus-config.mjs export --out etat-actuel.json   # photographie un Nexus existant (lecture seule)
-node scripts/nexus-config.mjs check                           # compare Nexus au fichier de config (lecture seule)
-node scripts/nexus-config.mjs check --public                  # + sondes anonymes et certificat TLS via le reverse proxy
-node scripts/nexus-config.mjs apply --dry-run --update        # montre ce qui serait créé ou corrigé
-NEXUS_CI_PASSWORD=... node scripts/nexus-config.mjs apply     # crée ce qui manque, ne touche à rien d'existant
-NEXUS_CI_PASSWORD=... node scripts/nexus-config.mjs apply --update   # corrige aussi les écarts
+./scripts/nexus-config.sh audit     # 1. LECTURE SEULE : tout voir avant de décider
+./scripts/nexus-config.sh apply     # 2. simulation, confirmation, puis application
 ```
 
-- `check` ne modifie rien. Il signale les écarts (`ÉCART`), les éléments manquants (`ABSENT`) et ceux qui existent
-  dans Nexus sans être dans le fichier (`EN PLUS`, simple information). Les sondes `--public` envoient des requêtes
-  HTTP anonymes : elles ne partent que si l'option est donnée.
+**`audit`** (rien n'est modifié sur Nexus) fait en une fois, avec un seul mot de passe à saisir :
+
+1. la **photographie** de Nexus, écrite dans `etat-actuel.json` (ignoré par Git) ;
+2. la **comparaison** au fichier de config, avec les sondes anonymes du reverse proxy et le contrôle du certificat TLS
+   (`OK`, `ÉCART`, `ABSENT`, `EN PLUS`) ;
+3. la **simulation** de ce que ferait `apply --update` : ce qui serait créé ou corrigé.
+
+**`apply`** montre d'abord la simulation, puis demande de taper **`oui`** : toute autre réponse annule sans rien modifier.
+Il demande le mot de passe admin, puis celui de chaque utilisateur du fichier (`ci`) : à laisser vide si l'utilisateur
+existe déjà. C'est la seule commande qui modifie Nexus ; elle corrige les écarts (`--update`), **y compris les droits de
+l'accès anonyme** : lire la simulation avant de répondre.
+
+Les mots de passe déjà présents dans l'environnement (`NEXUS_ADMIN_PASSWORD`, `NEXUS_CI_PASSWORD`) ne sont pas redemandés.
+`./scripts/nexus-config.sh check` et `export` existent aussi, pour une étape isolée.
+
+### Référence de l'outil
+
+```bash
+node scripts/nexus-config.mjs audit                  # export + check + simulation, lecture seule (ce que fait le lanceur)
+node scripts/nexus-config.mjs export --out etat.json # photographie un Nexus existant (lecture seule)
+node scripts/nexus-config.mjs check                  # compare Nexus au fichier de config (lecture seule)
+node scripts/nexus-config.mjs check --public         # + sondes anonymes et certificat TLS via le reverse proxy
+node scripts/nexus-config.mjs apply --dry-run --update    # ce qui serait créé ou corrigé
+node scripts/nexus-config.mjs apply --update --url URL    # applique (adresse obligatoire)
+```
+
+(avec `NEXUS_ADMIN_PASSWORD` dans l'environnement quand on appelle l'outil directement)
+
+- `check` et `audit` ne modifient rien. `check` signale les écarts (`ÉCART`), les éléments manquants (`ABSENT`) et ceux qui
+  existent dans Nexus sans être dans le fichier (`EN PLUS`, simple information). Les sondes envoient des requêtes HTTP
+  anonymes : elles ne partent que pour `audit` sur l'adresse du contrat, ou si `--public` est donné.
 - `apply` sans `--update` ne touche jamais à un élément existant. Avec `--update`, seuls les champs en écart sont
-  modifiés (le reste d'un dépôt est conservé), y compris les droits de l'accès anonyme : toujours passer par
-  `--dry-run` d'abord sur un Nexus de production.
+  modifiés (le reste d'un dépôt est conservé).
+- **Garde-fou** : pour un `apply` réel, l'adresse doit être donnée explicitement (`--url` ou `NEXUS_URL`) ; elle n'est jamais
+  prise par défaut dans le fichier de config. Une application involontaire sur la production est ainsi impossible.
 - Docker est en **routage par chemin** (`<hôte>/docker-private/<image>`, `<hôte>/docker-public/<image>`) : passer un
   dépôt existant de connecteur de port à chemin change le nom des images pour tous les clients. Le miroir
   `docker-hub` reste en connecteur de port (8102), réseau local seulement.
