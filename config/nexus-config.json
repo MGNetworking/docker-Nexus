@@ -1,0 +1,58 @@
+{
+  "contract": {
+    "description": "Ce que Nexus attend du reverse proxy (Nginx-config/nginx/001nexus.conf) : Docker en routage par chemin sur le port web de Nexus ; seul le miroir Docker Hub (port 8102) reste en connecteur de port, réseau local seulement.",
+    "publicUrl": "https://sonatype-nexus.backhole.ovh",
+    "reverseProxy": "Nginx-config/nginx/001nexus.conf",
+    "dockerRouting": "path",
+    "upstreamPorts": { "web": 8100, "dockerHubMirror": 8102 },
+    "probes": [
+      { "description": "API de Nexus joignable à travers le proxy", "path": "/service/rest/v1/status", "expect": [200] },
+      { "description": "Registre Docker (/v2/) : défi d'authentification", "path": "/v2/", "expect": [401] },
+      { "description": "maven-public lisible sans identifiants (proxy Maven Central)", "path": "/repository/maven-public/junit/junit/4.13.2/junit-4.13.2.pom", "expect": [200] },
+      { "description": "maven-private refusé sans identifiants", "path": "/repository/maven-private/", "expect": [401, 403] },
+      { "description": "docker-private refusé sans identifiants", "path": "/v2/docker-private/_probe/manifests/latest", "expect": [401] }
+    ]
+  },
+
+  "realms": ["NexusAuthenticatingRealm", "DockerToken", "NuGetApiKey"],
+
+  "anonymous": { "enabled": true, "roles": ["anonymous-public"] },
+
+  "repositories": [
+    { "name": "maven-central",   "format": "maven", "type": "proxy",  "remoteUrl": "https://repo1.maven.org/maven2/", "versionPolicy": "RELEASE", "layoutPolicy": "PERMISSIVE" },
+    { "name": "maven-releases",  "format": "maven", "type": "hosted", "versionPolicy": "RELEASE",  "writePolicy": "allow_once" },
+    { "name": "maven-snapshots", "format": "maven", "type": "hosted", "versionPolicy": "SNAPSHOT", "writePolicy": "allow" },
+    { "name": "maven-private",   "format": "maven", "type": "hosted", "versionPolicy": "MIXED",    "writePolicy": "allow" },
+    { "name": "maven-public",    "format": "maven", "type": "group",  "members": ["maven-releases", "maven-snapshots", "maven-central"] },
+
+    { "name": "nuget-org",       "format": "nuget", "type": "proxy",  "remoteUrl": "https://api.nuget.org/v3/index.json" },
+    { "name": "nuget-hosted",    "format": "nuget", "type": "hosted", "writePolicy": "allow_once" },
+    { "name": "nuget-group",     "format": "nuget", "type": "group",  "members": ["nuget-hosted", "nuget-org"] },
+
+    { "name": "docker-private",  "format": "docker", "type": "hosted", "writePolicy": "allow", "pathRouting": true, "anonymousPull": false },
+    { "name": "docker-public",   "format": "docker", "type": "hosted", "writePolicy": "allow", "pathRouting": true, "anonymousPull": true },
+    { "name": "docker-hub",      "format": "docker", "type": "proxy",  "remoteUrl": "https://registry-1.docker.io", "pathRouting": false, "anonymousPull": true, "httpPort": 8102 }
+  ],
+
+  "roles": [
+    {
+      "id": "anonymous-public",
+      "description": "Lecture seule des dépôts publics",
+      "privileges": [
+        { "repositories": ["docker-public", "docker-hub", "maven-public", "nuget-group"], "actions": ["browse", "read"] }
+      ]
+    },
+    {
+      "id": "ci-deployer",
+      "description": "Lecture de tous les dépôts, écriture sur les dépôts hébergés",
+      "privileges": [
+        { "repositories": "*", "actions": ["browse", "read"] },
+        { "repositories": ["maven-releases", "maven-snapshots", "maven-private", "nuget-hosted", "docker-private", "docker-public"], "actions": ["*"] }
+      ]
+    }
+  ],
+
+  "users": [
+    { "userId": "ci", "firstName": "CI", "lastName": "Deploy", "email": "ci@example.org", "roles": ["ci-deployer"], "passwordEnv": "NEXUS_CI_PASSWORD" }
+  ]
+}

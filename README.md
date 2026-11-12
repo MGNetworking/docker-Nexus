@@ -19,6 +19,7 @@ dans ce dépôt.
 - [Démarrage rapide](#démarrage-rapide)
 - [Stockage et volumes](#stockage-et-volumes)
 - [Scripts d'exploitation](#scripts-dexploitation)
+- [Configuration de Nexus (nexus-config)](#configuration-de-nexus-nexus-config)
 - [Configuration Docker (client)](#configuration-docker-client)
 - [Utilisation Docker Registry privée](#utilisation-docker-registry-privée)
 - [Notes de sécurité](#notes-de-sécurité)
@@ -115,6 +116,41 @@ Les scripts sont regroupés dans le répertoire `scripts/` :
 # Restauration
 ./scripts/restore_nexus_volume.sh nexus-data ./backup/nexus-data_YYYYMMDD_HHMMSS.tar.gz
 ```
+
+---
+
+## Configuration de Nexus (nexus-config)
+
+La configuration de Nexus (dépôts, accès anonyme, rôles, utilisateurs) est décrite dans un fichier versionné et
+appliquée par un outil, au lieu d'être saisie à la main dans l'interface.
+
+- `config/nexus-config.json` : l'état voulu. Aucun mot de passe : chaque utilisateur est lié à une variable
+  d'environnement (`passwordEnv`). La section `contract` décrit ce que Nexus attend du reverse proxy.
+- `scripts/nexus-config.mjs` : l'outil, sans dépendance (Node 18 ou plus).
+
+```bash
+export NEXUS_URL=https://sonatype-nexus.backhole.ovh NEXUS_ADMIN_PASSWORD=...   # compte administrateur
+
+node scripts/nexus-config.mjs export --out etat-actuel.json   # photographie un Nexus existant (lecture seule)
+node scripts/nexus-config.mjs check                           # compare Nexus au fichier de config (lecture seule)
+node scripts/nexus-config.mjs check --public                  # + sondes anonymes et certificat TLS via le reverse proxy
+node scripts/nexus-config.mjs apply --dry-run --update        # montre ce qui serait créé ou corrigé
+NEXUS_CI_PASSWORD=... node scripts/nexus-config.mjs apply     # crée ce qui manque, ne touche à rien d'existant
+NEXUS_CI_PASSWORD=... node scripts/nexus-config.mjs apply --update   # corrige aussi les écarts
+```
+
+- `check` ne modifie rien. Il signale les écarts (`ÉCART`), les éléments manquants (`ABSENT`) et ceux qui existent
+  dans Nexus sans être dans le fichier (`EN PLUS`, simple information). Les sondes `--public` envoient des requêtes
+  HTTP anonymes : elles ne partent que si l'option est donnée.
+- `apply` sans `--update` ne touche jamais à un élément existant. Avec `--update`, seuls les champs en écart sont
+  modifiés (le reste d'un dépôt est conservé), y compris les droits de l'accès anonyme : toujours passer par
+  `--dry-run` d'abord sur un Nexus de production.
+- Docker est en **routage par chemin** (`<hôte>/docker-private/<image>`, `<hôte>/docker-public/<image>`) : passer un
+  dépôt existant de connecteur de port à chemin change le nom des images pour tous les clients. Le miroir
+  `docker-hub` reste en connecteur de port (8102), réseau local seulement.
+- Le contrat de licence (CLUF) de Nexus Community n'est jamais accepté par l'outil : à faire dans l'interface.
+- Le reverse proxy (`Nginx-config/nginx/001nexus.conf`) est testé contre ce même fichier par le banc
+  `Nginx-config/tests/nexus/run.sh`.
 
 ---
 
